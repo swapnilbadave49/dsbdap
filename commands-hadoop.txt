@@ -1,0 +1,5 @@
+hdfs dfs -mkdir /inputfolder    //  input folder creation
+hdfs dfs -put /home/cloudera/inputfilename /inputfolder/    //  file put
+hadoop jar /home/cloudera/jarfilename Class_name /inputfolder/inputfilename /out2   //  run
+hdfs dfs -ls /out2  //  list out files in output folder
+hdfs dfs -cat /out2/part-r-00000    //  printing the output

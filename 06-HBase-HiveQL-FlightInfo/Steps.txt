@@ -1,0 +1,250 @@
+Write an application using HBase and HiveQL for flight information system which will 
+include
+a. Create Flight Info Hbase Table(with Flight information, schedule, and delay)
+b. Demonstrate Creating, Dropping, and altering Database tables in Hbase
+c. Creating an external Hive table to connect to the HBase for Flight Information Table
+d. Find the total departure delay in Hive
+e. Find the average departure delay in Hive
+f. Create index on Flight information Table
+
+
+
+[cloudera@quickstart ~]$ hbase shell
+
+2024-05-08 03:47:55,651 INFO  [main] Configuration.deprecation: hadoop.native.lib is deprecated. Instead, use io.native.lib.available
+HBase Shell; enter 'help<RETURN>' for list of supported commands.
+Type "exit<RETURN>" to leave the HBase Shell
+Version 1.0.0-cdh5.4.2, rUnknown, Tue May 19 17:07:29 PDT 2015
+
+
+If Any Zookeeper Error comes while creating table
+do check services status by enetring following command:
+
+services --status-all
+
+then to restart hbase services do the following:
+
+1. Enter into root mode: 
+    sudo su
+
+2. restart services
+    service hbase-master restart
+
+3. restart service
+    service hbase-regionserver restart
+
+then Type exit to exit from root mode
+
+start creating table and add entries:
+
+1.  hbase(main):001:0> create 'flight','finfo','fsch'
+
+// list tables
+2.  hbase(main):001:0> list 
+
+// put the records in it
+3.  hbase(main):003:0> put 'flight',2,'finfo:source','nashik'
+    0 row(s) in 0.3020 seconds
+
+    hbase(main):004:0> put 'flight',2,'finfo:dest','satana'
+    0 row(s) in 0.0120 seconds
+
+    hbase(main):003:0> put 'flight',2,'finfo:year','2025'
+    0 row(s) in 0.3380 seconds
+
+    hbase(main):004:0> put 'flight',2,'fsch:at','2:00 PM'
+    0 row(s) in 0.0240 seconds
+
+    hbase(main):005:0> put 'flight',2,'fsch:dt','3:00 PM'
+    0 row(s) in 0.0190 seconds
+
+    hbase(main):006:0> put 'flight',2,'fsch:delay_in_mins', 60
+    0 row(s) in 0.0120 seconds
+
+// then see the contents
+4. hbase(main):007:0> scan 'flight'
+    ROW                                COLUMN+CELL                                                                                         
+    1                                 column=finfo:dest, timestamp=1715163854340, value=pune                                              
+    1                                 column=finfo:source, timestamp=1715163838127, value=mumbai                                          
+    1                                 column=finfo:year, timestamp=1715163869808, value=2024                                              
+    1                                 column=fsch:at, timestamp=1715163886590, value=10:10 AM                                             
+    1                                 column=fsch:delay_in_mins, timestamp=1715163912771, value=30                                        
+    1                                 column=fsch:dt, timestamp=1715163895751, value=10:30 AM                                             
+    2                                 column=finfo:dest, timestamp=1715165336868, value=satana                                            
+    2                                 column=finfo:source, timestamp=1715165325681, value=nashik                                          
+    2                                 column=finfo:year, timestamp=1715165439681, value=2025                                              
+    2                                 column=fsch:at, timestamp=1715165462161, value=2:00 PM                                              
+    2                                 column=fsch:delay_in_mins, timestamp=1715165482546, value=60                                        
+    2                                 column=fsch:dt, timestamp=1715165471253, value=3:00 PM                                              
+    2 row(s) in 0.1510 seconds
+
+// alter the contents
+5.  hbase(main):008:0> delete 'flight','1','fsch:delay_in_mins',1715163912771
+    0 row(s) in 0.1230 seconds
+
+    hbase(main):009:0> scan 'flight'
+    ROW                                COLUMN+CELL                                                                                         
+    1                                 column=finfo:dest, timestamp=1715163854340, value=pune                                              
+    1                                 column=finfo:source, timestamp=1715163838127, value=mumbai                                          
+    1                                 column=finfo:year, timestamp=1715163869808, value=2024                                              
+    1                                 column=fsch:at, timestamp=1715163886590, value=10:10 AM                                             
+    1                                 column=fsch:dt, timestamp=1715163895751, value=10:30 AM                                             
+    2                                 column=finfo:dest, timestamp=1715165336868, value=satana                                            
+    2                                 column=finfo:source, timestamp=1715165325681, value=nashik                                          
+    2                                 column=finfo:year, timestamp=1715165439681, value=2025                                              
+    2                                 column=fsch:at, timestamp=1715165462161, value=2:00 PM                                              
+    2                                 column=fsch:delay_in_mins, timestamp=1715165482546, value=60                                        
+    2                                 column=fsch:dt, timestamp=1715165471253, value=3:00 PM                                              
+    2 row(s) in 0.0740 seconds
+
+    hbase(main):010:0> put 'flight',1,'fsch:delay_in_mins', 30
+    0 row(s) in 0.0170 seconds
+
+    hbase(main):011:0> scan 'flight'
+    ROW                                COLUMN+CELL                                                                                         
+    1                                 column=finfo:dest, timestamp=1715163854340, value=pune                                              
+    1                                 column=finfo:source, timestamp=1715163838127, value=mumbai                                          
+    1                                 column=finfo:year, timestamp=1715163869808, value=2024                                              
+    1                                 column=fsch:at, timestamp=1715163886590, value=10:10 AM                                             
+    1                                 column=fsch:delay_in_mins, timestamp=1715165692904, value=30                                        
+    1                                 column=fsch:dt, timestamp=1715163895751, value=10:30 AM                                             
+    2                                 column=finfo:dest, timestamp=1715165336868, value=satana                                            
+    2                                 column=finfo:source, timestamp=1715165325681, value=nashik                                          
+    2                                 column=finfo:year, timestamp=1715165439681, value=2025                                              
+    2                                 column=fsch:at, timestamp=1715165462161, value=2:00 PM                                              
+    2                                 column=fsch:delay_in_mins, timestamp=1715165482546, value=60                                        
+    2                                 column=fsch:dt, timestamp=1715165471253, value=3:00 PM                                              
+    2 row(s) in 0.0520 seconds
+
+// add new field revenue (altering the table)
+6. hbase(main):012:0> alter 'flight',NAME=>'revenue'
+    Updating all regions with the new schema...
+    0/1 regions updated.
+    1/1 regions updated.
+    Done.
+    0 row(s) in 3.3630 seconds
+
+    hbase(main):013:0> put 'flight',1,'revenue:in Rs','45000'
+    0 row(s) in 0.0350 seconds
+
+    hbase(main):014:0> put 'flight',2,'revenue:in Rs','50000'
+    0 row(s) in 0.0220 seconds
+
+    hbase(main):015:0> scan 'flight'
+    ROW                                COLUMN+CELL                                                                                         
+    1                                 column=finfo:dest, timestamp=1715163854340, value=pune                                              
+    1                                 column=finfo:source, timestamp=1715163838127, value=mumbai                                          
+    1                                 column=finfo:year, timestamp=1715163869808, value=2024                                              
+    1                                 column=fsch:at, timestamp=1715163886590, value=10:10 AM                                             
+    1                                 column=fsch:delay_in_mins, timestamp=1715165692904, value=30                                        
+    1                                 column=fsch:dt, timestamp=1715163895751, value=10:30 AM                                             
+    1                                 column=revenue:in Rs, timestamp=1715165856876, value=45000                                          
+    2                                 column=finfo:dest, timestamp=1715165336868, value=satana                                            
+    2                                 column=finfo:source, timestamp=1715165325681, value=nashik                                          
+    2                                 column=finfo:year, timestamp=1715165439681, value=2025                                              
+    2                                 column=fsch:at, timestamp=1715165462161, value=2:00 PM                                              
+    2                                 column=fsch:delay_in_mins, timestamp=1715165482546, value=60                                        
+    2                                 column=fsch:dt, timestamp=1715165471253, value=3:00 PM                                              
+    2                                 column=revenue:in Rs, timestamp=1715165873749, value=50000                                          
+    2 row(s) in 0.1060 seconds
+
+
+
+
+
+
+
+    Enter into Hive to create external table
+
+[cloudera@quickstart ~]$ hive
+
+Logging initialized using configuration in file:/etc/hive/conf.dist/hive-log4j.properties
+WARNING: Hive CLI is deprecated and migration to Beeline is recommended.
+
+// create a table in hive and assigne same contents from hbase table
+hive> create external table hbase_flight_new(fno int,fsource string, fdest string, fsh_at string,fsh_dt string, delay int)
+    > stored by 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+    > with serdeproperties("hbase.columns.mapping" = 
+    > ":key,finfo:source,finfo:dest,fsch:at,fsch:dt,fsch:delay_in_mins")
+    > TBLPROPERTIES("hbase.table.name"="flight");
+OK
+Time taken: 21.621 seconds
+
+// see the contents
+hive> select *from hbase_flight_new;
+OK
+1	mumbai	pune	10:10 AM	10:30 AM	30
+2	nashik	satana	2:00 PM	3:00 PM	60
+
+
+// Find the total departure delay in Hive
+hive> select sum(delay) from hbase_flight_new;
+
+
+Query ID = cloudera_20240508041717_b4f37419-2b76-40cf-a4b1-d00b71718b91
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0024, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0024/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0024
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2024-05-08 04:18:16,664 Stage-1 map = 0%,  reduce = 0%
+2024-05-08 04:18:43,547 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 6.87 sec
+2024-05-08 04:19:04,354 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 11.55 sec
+MapReduce Total cumulative CPU time: 11 seconds 550 msec
+Ended Job = job_1715074264747_0024
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 11.55 sec   HDFS Read: 7417 HDFS Write: 3 SUCCESS
+Total MapReduce CPU Time Spent: 11 seconds 550 msec
+OK
+90 -------- answer
+
+
+// Find the average departure delay in Hive
+
+hive> select avg(delay) from hbase_flight_new;
+Query ID = cloudera_20240508041919_c4f72c97-1835-4dec-948a-e6ed44b30933
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0025, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0025/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0025
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2024-05-08 04:19:46,054 Stage-1 map = 0%,  reduce = 0%
+2024-05-08 04:20:09,433 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 7.03 sec
+2024-05-08 04:20:34,780 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 11.96 sec
+MapReduce Total cumulative CPU time: 11 seconds 960 msec
+Ended Job = job_1715074264747_0025
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 11.96 sec   HDFS Read: 7867 HDFS Write: 5 SUCCESS
+Total MapReduce CPU Time Spent: 11 seconds 960 msec
+OK
+45.0 -------------answer
+Time taken: 81.824 seconds, Fetched: 1 row(s)
+
+
+
+// Create index on Flight information Table
+
+hive> create index hbase_index
+    > on table hbase_flight_new (delay)
+    > as 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler'
+    > with deferred rebuild;
+OK
+Time taken: 1.651 seconds
+hive> show index on hbase_flight_new;
+OK
+hbase_index         	hbase_flight_new    	delay               	default__hbase_flight_new_hbase_index__	compact             	
+Time taken: 0.27 seconds, Fetched: 1 row(s)

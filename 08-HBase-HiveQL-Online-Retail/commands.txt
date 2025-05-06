@@ -1,0 +1,453 @@
+Write an application using HBase and HiveQL for OnlineRetail Dataset which will include
+i. Create and Load table with Online Retail data in Hive.
+j. Create Index on Online Retail Table in Hive.
+k. Find the total, average sales in Hive
+l. Find Order details with maximum cost.
+m. Find Customer details with maximum order total.
+n. Find the Country with maximum and minimum sale.
+o. Creating an external Hive table to connect to the HBase for OnlineRetail.
+p. Display records of OnlineRetail Table in Hbase.
+
+
+
+
+
+
+
+
+
+
+[cloudera@quickstart ~]$ hive
+
+Logging initialized using configuration in file:/etc/hive/conf.dist/hive-log4j.properties
+WARNING: Hive CLI is deprecated and migration to Beeline is recommended.
+
+i. Create and Load table with Online Retail data in Hive.
+
+hive> create table OnlineRetail(
+    > InvoiceNo string,
+    > StockCode string,
+    > Description string,
+    > Quantity int
+    > , UnitPrice double,
+    > CustomerID int,
+    > Country string)
+    > row format delimited
+    > fields terminated by ','
+    > stored as textfile;
+OK
+Time taken: 2.465 seconds
+hive> load data local inpath '/home/cloudera/onlineRetail.csv' into table OnlineRetail
+    > ;
+Loading data to table default.onlineretail
+Table default.onlineretail stats: [numFiles=1, totalSize=522]
+OK
+Time taken: 2.355 seconds
+hive> select * from OnlineRetail;
+OK
+536365	A452	Abracadabra Bag	5	2.99	17850	United Kingdom
+536366	B123	Bubblegum Bracelet	3	1.5	17851	United Kingdom
+536367	C789	Crystal Crown	1	9.99	17852	France
+536368	D987	Dragon Earrings	2	4.75	17853	Germany
+536369	E654	Enchanted Necklace	1	12.99	17854	France
+536370	F321	Fairy Dust Powder	4	3.25	17855	Germany
+536371	G111	Golden Ring	2	15.5	17856	United Kingdom
+536372	H222	Harmony Pendant	1	8.49	17857	France
+536373	I333	Infinity Bangle	3	6.75	17858	United Kingdom
+536374	J444	Jewel Box	1	18.99	17859	Germany
+Time taken: 2.041 seconds, Fetched: 10 row(s)
+
+
+j. Create Index on Online Retail Table in Hive.
+
+
+hive> create index olindex on table OnlineRetail(InvoiceNo) as 'compact' with deferred rebuild;
+OK
+Time taken: 0.79 seconds
+
+
+hive> show index on OnlineRetail;
+OK
+olindex             	onlineretail        	invoiceno           	default__onlineretail_olindex__	compact             	
+Time taken: 0.209 seconds, Fetched: 1 row(s)
+
+
+k. Find the total, average sales in Hive
+
+
+hive> select sum(Quantity * UnitPrice) as total, avg(Quantity*UnitPrice) as average from Onlineretail;
+
+Query ID = cloudera_20240508085454_43f57c68-d234-4d5d-bb51-2e22adab46be
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0035, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0035/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0035
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2024-05-08 08:54:35,740 Stage-1 map = 0%,  reduce = 0%
+2024-05-08 08:54:55,231 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 5.52 sec
+2024-05-08 08:55:13,899 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 10.25 sec
+MapReduce Total cumulative CPU time: 10 seconds 250 msec
+Ended Job = job_1715074264747_0035
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 10.25 sec   HDFS Read: 9891 HDFS Write: 14 SUCCESS
+Total MapReduce CPU Time Spent: 10 seconds 250 msec
+OK
+143.66	14.366
+Time taken: 69.659 seconds, Fetched: 1 row(s)
+
+
+
+l. Find Order details with maximum cost.
+
+
+hive> select * from
+    > (select InvoiceNo, sum(Quantity*UnitPrice) as totalcost from OnlineRetail group by InvoiceNo)
+    > as ordercost
+    > order by totalcost desc
+    > limit 1;
+Query ID = cloudera_20240508090404_7d5888d9-f87b-49f6-b423-f4e71493b406
+Total jobs = 2
+Launching Job 1 out of 2
+Number of reduce tasks not specified. Estimated from input data size: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0037, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0037/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0037
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2024-05-08 09:04:50,409 Stage-1 map = 0%,  reduce = 0%
+2024-05-08 09:05:11,188 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 5.61 sec
+2024-05-08 09:05:30,084 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 10.3 sec
+MapReduce Total cumulative CPU time: 10 seconds 300 msec
+Ended Job = job_1715074264747_0037
+Launching Job 2 out of 2
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0038, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0038/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0038
+Hadoop job information for Stage-2: number of mappers: 1; number of reducers: 1
+2024-05-08 09:05:51,639 Stage-2 map = 0%,  reduce = 0%
+2024-05-08 09:06:08,128 Stage-2 map = 100%,  reduce = 0%, Cumulative CPU 2.2 sec
+2024-05-08 09:06:24,029 Stage-2 map = 100%,  reduce = 100%, Cumulative CPU 6.28 sec
+MapReduce Total cumulative CPU time: 6 seconds 280 msec
+Ended Job = job_1715074264747_0038
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 10.3 sec   HDFS Read: 8442 HDFS Write: 416 SUCCESS
+Stage-Stage-2: Map: 1  Reduce: 1   Cumulative CPU: 6.28 sec   HDFS Read: 4930 HDFS Write: 12 SUCCESS
+Total MapReduce CPU Time Spent: 16 seconds 580 msec
+OK
+536371	31.0
+Time taken: 124.986 seconds, Fetched: 1 row(s)
+
+
+
+m. Find Customer details with maximum order total.
+
+
+hive> select CustomerID, sum(Quantity*UnitPrice) as totalcost
+    > from OnlineRetail
+    > group by CustomerID
+    > order by totalcost desc
+    > limit 1;
+Query ID = cloudera_20240508091111_549bc540-37c6-467d-a85e-573f8dff8040
+Total jobs = 2
+Launching Job 1 out of 2
+Number of reduce tasks not specified. Estimated from input data size: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0039, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0039/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0039
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2024-05-08 09:11:32,760 Stage-1 map = 0%,  reduce = 0%
+2024-05-08 09:11:49,979 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 4.52 sec
+2024-05-08 09:12:08,572 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 8.7 sec
+MapReduce Total cumulative CPU time: 8 seconds 700 msec
+Ended Job = job_1715074264747_0039
+Launching Job 2 out of 2
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0040, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0040/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0040
+Hadoop job information for Stage-2: number of mappers: 1; number of reducers: 1
+2024-05-08 09:12:28,230 Stage-2 map = 0%,  reduce = 0%
+2024-05-08 09:12:44,335 Stage-2 map = 100%,  reduce = 0%, Cumulative CPU 2.89 sec
+2024-05-08 09:13:00,546 Stage-2 map = 100%,  reduce = 100%, Cumulative CPU 6.71 sec
+MapReduce Total cumulative CPU time: 6 seconds 710 msec
+Ended Job = job_1715074264747_0040
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 8.7 sec   HDFS Read: 8444 HDFS Write: 376 SUCCESS
+Stage-Stage-2: Map: 1  Reduce: 1   Cumulative CPU: 6.71 sec   HDFS Read: 4854 HDFS Write: 11 SUCCESS
+Total MapReduce CPU Time Spent: 15 seconds 410 msec
+OK
+17856	31.0
+Time taken: 111.778 seconds, Fetched: 1 row(s)
+
+
+n. Find the Country with maximum and minimum sale.
+
+
+maximum:
+
+hive> select country, sum(Quantity * UnitPrice) as totalsale
+    > from OnlineRetail
+    > group by Country
+    > order by totalsale desc
+    > limit 1;
+Query ID = cloudera_20240508091616_90fb1520-9802-4d0c-ac49-d57d9a9c03f9
+Total jobs = 2
+Launching Job 1 out of 2
+Number of reduce tasks not specified. Estimated from input data size: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0041, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0041/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0041
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2024-05-08 09:17:17,795 Stage-1 map = 0%,  reduce = 0%
+2024-05-08 09:17:36,627 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 5.73 sec
+2024-05-08 09:17:57,036 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 9.75 sec
+MapReduce Total cumulative CPU time: 9 seconds 750 msec
+Ended Job = job_1715074264747_0041
+Launching Job 2 out of 2
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0042, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0042/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0042
+Hadoop job information for Stage-2: number of mappers: 1; number of reducers: 1
+2024-05-08 09:18:18,080 Stage-2 map = 0%,  reduce = 0%
+2024-05-08 09:18:34,071 Stage-2 map = 100%,  reduce = 0%, Cumulative CPU 3.15 sec
+2024-05-08 09:18:54,376 Stage-2 map = 100%,  reduce = 100%, Cumulative CPU 7.14 sec
+MapReduce Total cumulative CPU time: 7 seconds 140 msec
+Ended Job = job_1715074264747_0042
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 9.75 sec   HDFS Read: 8439 HDFS Write: 201 SUCCESS
+Stage-Stage-2: Map: 1  Reduce: 1   Cumulative CPU: 7.14 sec   HDFS Read: 4694 HDFS Write: 20 SUCCESS
+Total MapReduce CPU Time Spent: 16 seconds 890 msec
+OK
+United Kingdom	70.7
+Time taken: 119.42 seconds, Fetched: 1 row(s)
+
+
+
+minimum:
+
+hive> select country, sum(Quantity * UnitPrice) as totalsale
+    > from OnlineRetail
+    > group by Country
+    > order by totalsale asc
+    > limit 1;
+Query ID = cloudera_20240508092020_1462005e-e33d-491e-9157-a17a6fb013e9
+Total jobs = 2
+Launching Job 1 out of 2
+Number of reduce tasks not specified. Estimated from input data size: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0043, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0043/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0043
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2024-05-08 09:20:33,229 Stage-1 map = 0%,  reduce = 0%
+2024-05-08 09:20:51,658 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 5.35 sec
+2024-05-08 09:21:13,155 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 10.05 sec
+MapReduce Total cumulative CPU time: 10 seconds 50 msec
+Ended Job = job_1715074264747_0043
+Launching Job 2 out of 2
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1715074264747_0044, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0044/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0044
+Hadoop job information for Stage-2: number of mappers: 1; number of reducers: 1
+2024-05-08 09:21:41,131 Stage-2 map = 0%,  reduce = 0%
+2024-05-08 09:22:07,286 Stage-2 map = 100%,  reduce = 0%, Cumulative CPU 4.4 sec
+2024-05-08 09:22:32,281 Stage-2 map = 100%,  reduce = 100%, Cumulative CPU 8.94 sec
+MapReduce Total cumulative CPU time: 8 seconds 940 msec
+Ended Job = job_1715074264747_0044
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1  Reduce: 1   Cumulative CPU: 10.05 sec   HDFS Read: 8439 HDFS Write: 201 SUCCESS
+Stage-Stage-2: Map: 1  Reduce: 1   Cumulative CPU: 8.94 sec   HDFS Read: 4694 HDFS Write: 13 SUCCESS
+Total MapReduce CPU Time Spent: 18 seconds 990 msec
+OK
+France	31.47
+Time taken: 146.091 seconds, Fetched: 1 row(s)
+
+
+
+
+
+
+
+
+
+Creating an external Hive table to connect to the HBase for OnlineRetail.
+
+
+hive> create external table OnlineRetailHbase(
+    > InvoiceNo string,
+    > StockCode string,
+    > Description string,
+    > Quantity int,
+    > UnitPrice double,
+    > CustomerID int,
+    > Country string)
+    > stored by 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+    > with serdeproperties(
+    > "hbase.columns.mapping" = "
+    > :key,OnlineRetail:stock_code,OnlineRetail:description,OnlineRetail:quantity,OnlineRetail:unitprice,OnlineRetail:custID,OnlineRetail:country")
+    > tblproperties("hbase.table.name"="OnlineRetailRecords");
+OK
+Time taken: 3.481 seconds
+hive> insert into OnlineRetailHbase 
+    > select * from OnlineRetail;
+Query ID = cloudera_20240508092929_553763c6-2bd0-43ca-aa25-faac42255956
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1715074264747_0045, Tracking URL = http://quickstart.cloudera:8088/proxy/application_1715074264747_0045/
+Kill Command = /usr/lib/hadoop/bin/hadoop job  -kill job_1715074264747_0045
+Hadoop job information for Stage-0: number of mappers: 1; number of reducers: 0
+2024-05-08 09:29:42,983 Stage-0 map = 0%,  reduce = 0%
+2024-05-08 09:30:09,130 Stage-0 map = 100%,  reduce = 0%, Cumulative CPU 4.9 sec
+MapReduce Total cumulative CPU time: 4 seconds 900 msec
+Ended Job = job_1715074264747_0045
+MapReduce Jobs Launched: 
+Stage-Stage-0: Map: 1   Cumulative CPU: 5.77 sec   HDFS Read: 12053 HDFS Write: 0 SUCCESS
+Total MapReduce CPU Time Spent: 5 seconds 770 msec
+OK
+Time taken: 54.055 seconds
+hive> select * from OnlineRetailHbase;
+OK
+536365	A452	Abracadabra Bag	5	2.99	17850	United Kingdom
+536366	B123	Bubblegum Bracelet	3	1.5	17851	United Kingdom
+536367	C789	Crystal Crown	1	9.99	17852	France
+536368	D987	Dragon Earrings	2	4.75	17853	Germany
+536369	E654	Enchanted Necklace	1	12.99	17854	France
+536370	F321	Fairy Dust Powder	4	3.25	17855	Germany
+536371	G111	Golden Ring	2	15.5	17856	United Kingdom
+536372	H222	Harmony Pendant	1	8.49	17857	France
+536373	I333	Infinity Bangle	3	6.75	17858	United Kingdom
+536374	J444	Jewel Box	1	18.99	17859	Germany
+Time taken: 0.293 seconds, Fetched: 10 row(s)
+
+
+
+
+
+
+p. Display records of OnlineRetail Table in Hbase.
+
+
+hbase(main):001:0> create 'OnlineRetailRecords','OnlineRetail'
+0 row(s) in 3.0470 seconds
+
+=> Hbase::Table - OnlineRetailRecords
+hbase(main):002:0> list
+TABLE                                                                                                                                  
+CustomerInfo                                                                                                                           
+OnlineRetailRecords                                                                                                                    
+flight                                                                                                                                 
+3 row(s) in 0.1020 seconds
+
+=> ["CustomerInfo", "OnlineRetailRecords", "flight"]
+hbase(main):003:0> scan 'OnlineRetailRecords'
+ROW                                COLUMN+CELL                                                                                         
+ 536365                            column=OnlineRetail:country, timestamp=1715185808954, value=United Kingdom                          
+ 536365                            column=OnlineRetail:custID, timestamp=1715185808954, value=17850                                    
+ 536365                            column=OnlineRetail:description, timestamp=1715185808954, value=Abracadabra Bag                     
+ 536365                            column=OnlineRetail:quantity, timestamp=1715185808954, value=5                                      
+ 536365                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=A452                                 
+ 536365                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=2.99                                  
+ 536366                            column=OnlineRetail:country, timestamp=1715185808954, value=United Kingdom                          
+ 536366                            column=OnlineRetail:custID, timestamp=1715185808954, value=17851                                    
+ 536366                            column=OnlineRetail:description, timestamp=1715185808954, value=Bubblegum Bracelet                  
+ 536366                            column=OnlineRetail:quantity, timestamp=1715185808954, value=3                                      
+ 536366                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=B123                                 
+ 536366                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=1.5                                   
+ 536367                            column=OnlineRetail:country, timestamp=1715185808954, value=France                                  
+ 536367                            column=OnlineRetail:custID, timestamp=1715185808954, value=17852                                    
+ 536367                            column=OnlineRetail:description, timestamp=1715185808954, value=Crystal Crown                       
+ 536367                            column=OnlineRetail:quantity, timestamp=1715185808954, value=1                                      
+ 536367                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=C789                                 
+ 536367                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=9.99                                  
+ 536368                            column=OnlineRetail:country, timestamp=1715185808954, value=Germany                                 
+ 536368                            column=OnlineRetail:custID, timestamp=1715185808954, value=17853                                    
+ 536368                            column=OnlineRetail:description, timestamp=1715185808954, value=Dragon Earrings                     
+ 536368                            column=OnlineRetail:quantity, timestamp=1715185808954, value=2                                      
+ 536368                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=D987                                 
+ 536368                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=4.75                                  
+ 536369                            column=OnlineRetail:country, timestamp=1715185808954, value=France                                  
+ 536369                            column=OnlineRetail:custID, timestamp=1715185808954, value=17854                                    
+ 536369                            column=OnlineRetail:description, timestamp=1715185808954, value=Enchanted Necklace                  
+ 536369                            column=OnlineRetail:quantity, timestamp=1715185808954, value=1                                      
+ 536369                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=E654                                 
+ 536369                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=12.99                                 
+ 536370                            column=OnlineRetail:country, timestamp=1715185808954, value=Germany                                 
+ 536370                            column=OnlineRetail:custID, timestamp=1715185808954, value=17855                                    
+ 536370                            column=OnlineRetail:description, timestamp=1715185808954, value=Fairy Dust Powder                   
+ 536370                            column=OnlineRetail:quantity, timestamp=1715185808954, value=4                                      
+ 536370                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=F321                                 
+ 536370                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=3.25                                  
+ 536371                            column=OnlineRetail:country, timestamp=1715185808954, value=United Kingdom                          
+ 536371                            column=OnlineRetail:custID, timestamp=1715185808954, value=17856                                    
+ 536371                            column=OnlineRetail:description, timestamp=1715185808954, value=Golden Ring                         
+ 536371                            column=OnlineRetail:quantity, timestamp=1715185808954, value=2                                      
+ 536371                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=G111                                 
+ 536371                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=15.5                                  
+ 536372                            column=OnlineRetail:country, timestamp=1715185808954, value=France                                  
+ 536372                            column=OnlineRetail:custID, timestamp=1715185808954, value=17857                                    
+ 536372                            column=OnlineRetail:description, timestamp=1715185808954, value=Harmony Pendant                     
+ 536372                            column=OnlineRetail:quantity, timestamp=1715185808954, value=1                                      
+ 536372                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=H222                                 
+ 536372                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=8.49                                  
+ 536373                            column=OnlineRetail:country, timestamp=1715185808954, value=United Kingdom                          
+ 536373                            column=OnlineRetail:custID, timestamp=1715185808954, value=17858                                    
+ 536373                            column=OnlineRetail:description, timestamp=1715185808954, value=Infinity Bangle                     
+ 536373                            column=OnlineRetail:quantity, timestamp=1715185808954, value=3                                      
+ 536373                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=I333                                 
+ 536373                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=6.75                                  
+ 536374                            column=OnlineRetail:country, timestamp=1715185808954, value=Germany                                 
+ 536374                            column=OnlineRetail:custID, timestamp=1715185808954, value=17859                                    
+ 536374                            column=OnlineRetail:description, timestamp=1715185808954, value=Jewel Box                           
+ 536374                            column=OnlineRetail:quantity, timestamp=1715185808954, value=1                                      
+ 536374                            column=OnlineRetail:stock_code, timestamp=1715185808954, value=J444                                 
+ 536374                            column=OnlineRetail:unitprice, timestamp=1715185808954, value=18.99                                 
+10 row(s) in 0.4870 seconds
